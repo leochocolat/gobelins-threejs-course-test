@@ -91,9 +91,9 @@ export default class SceneLegoBuilder extends Scene {
         this.isReady = true;
 
         // Init with 3 legos
-        // this.spawnLego();
-        // this.spawnLego();
         this.spawnLego();
+        // this.spawnLego();
+        // this.spawnLego();
     }
 
     createFog() {
@@ -342,8 +342,10 @@ export default class SceneLegoBuilder extends Scene {
         for (let i = 2; i <= size; i++) {
             const indexOffset = { x: 0, y: 0 };
 
-            if (normalizedRotation === Math.PI) indexOffset.y = -(i - 1) * rotationDirection;
-            else indexOffset.x = (i - 1) * rotationDirection;
+            if (normalizedRotation === 0) indexOffset.y = i - 1;
+            if (normalizedRotation === Math.PI / 2) indexOffset.x = (i - 1) * rotationDirection;
+            if (normalizedRotation === Math.PI) indexOffset.y = -(i - 1);
+            if (normalizedRotation === 3 * (Math.PI / 2)) indexOffset.x = (i - 1) * -rotationDirection;
 
             const newAltitude = this.gridData[this.getGridFlatIndex(x + indexOffset.x, y + indexOffset.y)];
             altitudes.push(newAltitude);
@@ -370,8 +372,10 @@ export default class SceneLegoBuilder extends Scene {
         for (let i = 2; i <= size; i++) {
             const indexOffset = { x: 0, y: 0 };
 
-            if (normalizedRotation === Math.PI) indexOffset.y = -(i - 1) * rotationDirection;
-            else indexOffset.x = (i - 1) * rotationDirection;
+            if (normalizedRotation === 0) indexOffset.y = i - 1;
+            if (normalizedRotation === Math.PI / 2) indexOffset.x = (i - 1) * rotationDirection;
+            if (normalizedRotation === Math.PI) indexOffset.y = -(i - 1);
+            if (normalizedRotation === 3 * (Math.PI / 2)) indexOffset.x = (i - 1) * -rotationDirection;
 
             const index = this.getGridFlatIndex(x + indexOffset.x, y + indexOffset.y);
 
@@ -433,6 +437,8 @@ export default class SceneLegoBuilder extends Scene {
 
             gsap.killTweensOf(this.ghostLego.rotation);
             gsap.to(this.ghostLego.rotation, { y: rotation, duration: 0.5, ease: 'power3.out' });
+
+            this.raycast();
         }
 
         if (event.code === 'ArrowRight') {
@@ -440,16 +446,22 @@ export default class SceneLegoBuilder extends Scene {
 
             gsap.killTweensOf(this.ghostLego.rotation);
             gsap.to(this.ghostLego.rotation, { y: rotation, duration: 0.5, ease: 'power3.out' });
+
+            this.raycast();
         }
 
         if (event.code === 'ArrowUp') {
             const size = this.legoPropsManager.increaseSize();
             this.updateGhostSize(size);
+
+            this.raycast();
         }
 
         if (event.code === 'ArrowDown') {
             const size = this.legoPropsManager.decreaseSize();
             this.updateGhostSize(size);
+
+            this.raycast();
         }
     }
 
