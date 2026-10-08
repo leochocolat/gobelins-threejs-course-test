@@ -9,6 +9,7 @@ import {
     MeshBasicMaterial,
     MeshPhongMaterial,
     NearestFilter,
+    Object3D,
     PerspectiveCamera,
     PlaneGeometry,
     Raycaster,
@@ -46,13 +47,14 @@ export default class SceneLegoBuilder extends Scene {
 
         this.legoPropsManager = new LegoPropsManager();
 
-        this.gridSize = 51; // Must be ODD number
+        this.gridSize = 51; // Must be an ODD number
         this.gridData = this.createGridData();
         this.floorTexture = this.createFloorTexture();
         this.floor = this.createFloor();
         this.lights = this.createLights();
         this.ghostLego = this.createGhostLego();
         this.ghostCell = this.createGhoseCell();
+        this.updateGhostSize(this.legoPropsManager.size);
 
         this.altitude = 0;
 
@@ -61,7 +63,9 @@ export default class SceneLegoBuilder extends Scene {
         this.mouseGridPosition = new Vector2();
         this.mouseGridCellX = null;
         this.mouseGridCellY = null;
-        this.mouseGridFlatIndex = Math.floor((this.gridSize * this.gridSize) / 2);
+        this.gridCellX = Math.floor(this.gridSize / 2);
+        this.gridCellY = Math.floor(this.gridSize / 2);
+        this.mouseGridFlatIndex = this.getGridFlatIndex(this.mouseGridCellX, this.mouseGridCellY);
 
         this.setupEventListeners();
 
@@ -87,9 +91,9 @@ export default class SceneLegoBuilder extends Scene {
         this.isReady = true;
 
         // Init with 3 legos
-        // this.spawnLego(3);
         // this.spawnLego();
-        this.spawnLego(1);
+        // this.spawnLego();
+        this.spawnLego();
     }
 
     createFog() {
@@ -170,6 +174,8 @@ export default class SceneLegoBuilder extends Scene {
     }
 
     createGhostLego() {
+        const container = new Object3D();
+
         const geometry = new BoxGeometry(1, 1, 1);
 
         const material = new MeshBasicMaterial({
@@ -183,9 +189,10 @@ export default class SceneLegoBuilder extends Scene {
 
         const mesh = new Mesh(geometry, material);
 
-        this.add(mesh);
+        container.add(mesh);
+        this.add(container);
 
-        return mesh;
+        return container;
     }
 
     createGhoseCell() {
@@ -208,13 +215,17 @@ export default class SceneLegoBuilder extends Scene {
         return mesh;
     }
 
+    updateGhostSize(size) {
+        const ghostLegoMesh = this.ghostLego.children[0];
+        ghostLegoMesh.scale.z = size;
+        ghostLegoMesh.position.z = size / 2 - 0.5;
+    }
+
     spawnLego(_size, _color) {
-        const size = _size ? _size : Math.floor(Math.random() * 3 + 1);
+        const size = _size ? _size : this.legoPropsManager.size;
 
         const rotation = this.legoPropsManager.rotation;
         const color = _color ? _color : this.legoPropsManager.color;
-
-        console.log(this.mouseGridFlatIndex);
 
         const lego = new Lego({
             size,
@@ -226,9 +237,12 @@ export default class SceneLegoBuilder extends Scene {
 
         if (!this.legoSharedMaterial) this.legoSharedMaterial = lego.material;
 
-        const altitude = this.gridData[this.mouseGridFlatIndex];
+        if (this.mouseGridCellX !== null && this.mouseGridCellY !== null) {
+            this.gridCellX = this.mouseGridCellX;
+            this.gridCellY = this.mouseGridCellY;
+        }
 
-        console.log(altitude);
+        const altitude = this.getAltitude(this.gridCellX, this.gridCellY, size, rotation);
 
         lego.position.y = altitude + 2;
         lego.position.x = this.mouseGridPosition.x || 0;
@@ -240,15 +254,14 @@ export default class SceneLegoBuilder extends Scene {
 
         const timeline = new gsap.timeline();
         timeline.fromTo(lego.scale, { x: 0, y: 0, z: 0 }, { x: 1, y: 1, z: 1, duration: 0.5, ease: 'power3.out' }, 0);
-        timeline.to(lego.rotation, { y: Math.PI * 2, duration: 1, ease: 'power3.out' }, 0);
+        timeline.to(lego.model.rotation, { y: Math.PI * 2, duration: 1, ease: 'power3.out' }, 0);
         timeline.to(lego.position, { y: lego.position.y + 1.5, duration: 1, ease: 'power3.out' }, 0);
         timeline.to(lego.position, { y: altitude, duration: 0.8, ease: 'power4.in' }, 0.5);
         timeline.call(() => {
             this.playFloorImpact();
         }, null);
 
-        // Store altitude on grid data buffer
-        this.gridData[this.mouseGridFlatIndex] += 1;
+        this.updateAltitude(this.gridCellX, this.gridCellY, size, rotation);
 
         return lego;
     }
@@ -257,7 +270,6 @@ export default class SceneLegoBuilder extends Scene {
         this.floorImpactTimeline?.kill();
 
         this.floorImpactTimeline = new gsap.timeline();
-        // this.floorImpactTimeline.timeScale(2);
         this.floorImpactTimeline.fromTo(this.position, { y: 0 }, { y: -0.08, duration: 0.3, ease: 'power3.out' });
         this.floorImpactTimeline.to(this.position, { y: 0, duration: 0.3, ease: 'sine.out' });
     }
@@ -302,11 +314,85 @@ export default class SceneLegoBuilder extends Scene {
             this.gridSize - 1,
         );
 
-        this.mouseGridFlatIndex = this.gridSize * this.mouseGridCellY + this.mouseGridCellX;
-        this.mouseAltitude = this.gridData[this.mouseGridFlatIndex];
+        this.mouseAltitude = this.getAltitude(
+            this.mouseGridCellX,
+            this.mouseGridCellY,
+            this.legoPropsManager.size,
+            this.legoPropsManager.rotation,
+        );
 
         // Update Ghost position
         this.ghostLego.position.set(this.mouseGridPosition.x, this.mouseAltitude, this.mouseGridPosition.z);
+    }
+
+    getGridFlatIndex(x, y) {
+        return this.gridSize * y + x;
+    }
+
+    getAltitude(x, y, size, rotation) {
+        const baseAltitude = this.gridData[this.getGridFlatIndex(x, y)];
+
+        if (size == 1) return baseAltitude;
+
+        const normalizedRotation = this.normalizeRotation(rotation);
+        const rotationDirection = this.getRotationDirection(rotation);
+
+        const altitudes = [baseAltitude];
+
+        for (let i = 2; i <= size; i++) {
+            const indexOffset = { x: 0, y: 0 };
+
+            if (normalizedRotation === Math.PI) indexOffset.y = -(i - 1) * rotationDirection;
+            else indexOffset.x = (i - 1) * rotationDirection;
+
+            const newAltitude = this.gridData[this.getGridFlatIndex(x + indexOffset.x, y + indexOffset.y)];
+            altitudes.push(newAltitude);
+        }
+
+        altitudes.sort((a, b) => b - a);
+
+        return altitudes[0];
+    }
+
+    updateAltitude(x, y, size, rotation) {
+        const flatIndex = this.getGridFlatIndex(x, y);
+
+        if (size == 1) {
+            this.gridData[flatIndex] += 1;
+            return;
+        }
+
+        const normalizedRotation = this.normalizeRotation(rotation);
+        const rotationDirection = this.getRotationDirection(rotation);
+
+        const flatIndexes = [flatIndex];
+
+        for (let i = 2; i <= size; i++) {
+            const indexOffset = { x: 0, y: 0 };
+
+            if (normalizedRotation === Math.PI) indexOffset.y = -(i - 1) * rotationDirection;
+            else indexOffset.x = (i - 1) * rotationDirection;
+
+            const index = this.getGridFlatIndex(x + indexOffset.x, y + indexOffset.y);
+
+            flatIndexes.push(index);
+        }
+
+        const altitude = this.getAltitude(x, y, size, rotation);
+
+        flatIndexes.forEach((index) => {
+            this.gridData[index] = altitude + 1;
+        });
+    }
+
+    normalizeRotation(rotation) {
+        const absoluteRotation = Math.abs(rotation);
+        const normalizedRotation = absoluteRotation % (Math.PI * 2);
+        return normalizedRotation;
+    }
+
+    getRotationDirection(rotation) {
+        return rotation === 0 ? 1 : Math.sign(rotation);
     }
 
     resize(renderWidth, renderHeight) {
@@ -338,7 +424,7 @@ export default class SceneLegoBuilder extends Scene {
         if (event.code === 'Space') {
             const color = this.legoPropsManager.nextColor();
 
-            this.ghostLego.material.color.set(color);
+            this.ghostLego.children[0].material.color.set(color);
             this.ghostCell.material.color.set(color);
         }
 
@@ -354,6 +440,16 @@ export default class SceneLegoBuilder extends Scene {
 
             gsap.killTweensOf(this.ghostLego.rotation);
             gsap.to(this.ghostLego.rotation, { y: rotation, duration: 0.5, ease: 'power3.out' });
+        }
+
+        if (event.code === 'ArrowUp') {
+            const size = this.legoPropsManager.increaseSize();
+            this.updateGhostSize(size);
+        }
+
+        if (event.code === 'ArrowDown') {
+            const size = this.legoPropsManager.decreaseSize();
+            this.updateGhostSize(size);
         }
     }
 
@@ -383,7 +479,7 @@ export default class SceneLegoBuilder extends Scene {
 
         if (dist > 2) return;
 
-        this.spawnLego(1);
+        this.spawnLego();
     }
 
     controlsChangeHandler(e) {}

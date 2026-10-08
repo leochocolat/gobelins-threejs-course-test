@@ -1,3 +1,5 @@
+import { MathUtils } from 'three';
+
 function randomIntFromRange(min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
@@ -8,6 +10,7 @@ export default class LegoPropsManager {
     constructor() {
         this.colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
         this.rotationStep = Math.PI / 2;
+        this.size = 1;
 
         this.currentColorIndex = randomIntFromRange(0, this.colors.length - 1);
         this.currentRotationIndex = 0;
@@ -23,6 +26,7 @@ export default class LegoPropsManager {
 
     get props() {
         return {
+            size: this.size,
             color: this.color,
             rotation: this.rotation,
         };
@@ -52,5 +56,15 @@ export default class LegoPropsManager {
     shuffleRotation() {
         this.currentRotationIndex = randomIntFromRange(0, this.rotations.length - 1);
         return this.rotation;
+    }
+
+    increaseSize() {
+        this.size = MathUtils.clamp(this.size + 1, 1, 3);
+        return this.size;
+    }
+
+    decreaseSize() {
+        this.size = MathUtils.clamp(this.size - 1, 1, 3);
+        return this.size;
     }
 }
