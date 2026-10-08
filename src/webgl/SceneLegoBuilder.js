@@ -23,6 +23,7 @@ import Lego from './Lego';
 import { CustomBounce } from 'gsap/CustomBounce';
 import { CustomEase } from 'gsap/CustomEase';
 import LegoPropsManager from './LegoPropsManager';
+import { RapierPhysics } from 'three/addons/physics/RapierPhysics.js';
 
 gsap.registerPlugin(CustomEase, CustomBounce);
 
@@ -149,12 +150,15 @@ export default class SceneLegoBuilder extends Scene {
     }
 
     createFloor() {
-        const geometry = new PlaneGeometry(this.gridSize, this.gridSize, 1);
+        // const geometry = new PlaneGeometry(this.gridSize, this.gridSize, 1);
+        const geometry = new BoxGeometry(this.gridSize, 0.01, this.gridSize);
         const material = new MeshBasicMaterial({ map: this.floorTexture });
         const mesh = new Mesh(geometry, material);
-        mesh.rotation.x = -Math.PI / 2;
+        // mesh.rotation.x = -Math.PI / 2;
         mesh.position.y = -0.5;
         this.add(mesh);
+
+        mesh.userData.physics = { mass: 0 };
 
         return mesh;
     }
@@ -232,7 +236,6 @@ export default class SceneLegoBuilder extends Scene {
             color,
             material: this.legoSharedMaterial?.clone(),
             model: this.models[`lego${size}`].clone(),
-            physics: this.physics,
         });
 
         if (!this.legoSharedMaterial) this.legoSharedMaterial = lego.material;
@@ -516,6 +519,11 @@ export default class SceneLegoBuilder extends Scene {
             .on('change', (event) => {
                 this.camera = this.cameras[event.value];
             });
+
+        folder.addButton({ title: 'Test physics' }).on('click', async () => {
+            // this.physics = await RapierPhysics();
+            // this.physics.addScene(this);
+        });
 
         return folder;
     }

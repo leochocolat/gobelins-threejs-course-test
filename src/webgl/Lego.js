@@ -51,6 +51,8 @@ export default class Lego extends Object3D {
         const cube = new Mesh(geometry, this.material);
         this.container.add(cube);
 
+        cube.userData.physics = { mass: 1 };
+
         return cube;
     }
 
