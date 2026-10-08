@@ -107,6 +107,9 @@ export default class SceneLegoBuilder extends Scene {
         cameras.debug = new PerspectiveCamera(45, this.renderWidth / this.renderHeight, 0.1, 1000);
         cameras.debug.controls = new OrbitControls(cameras.debug, this.renderer.domElement);
         cameras.debug.controls.target.y = 2;
+        cameras.debug.controls.enableDamping = true;
+        cameras.debug.controls.dampingFactor = 0.05;
+        cameras.debug.controls.maxPolarAngle = Math.PI / 2;
         cameras.debug.position.set(-4, 3, 10);
         cameras.debug.controls.update();
 
@@ -227,7 +230,7 @@ export default class SceneLegoBuilder extends Scene {
 
         console.log(altitude);
 
-        lego.position.y = altitude + 6;
+        lego.position.y = altitude + 2;
         lego.position.x = this.mouseGridPosition.x || 0;
         lego.position.z = this.mouseGridPosition.z || 0;
 
@@ -235,7 +238,14 @@ export default class SceneLegoBuilder extends Scene {
 
         this.add(lego);
 
-        gsap.to(lego.position, { y: altitude, duration: 1, ease: 'bounce' });
+        const timeline = new gsap.timeline();
+        timeline.fromTo(lego.scale, { x: 0, y: 0, z: 0 }, { x: 1, y: 1, z: 1, duration: 0.5, ease: 'power3.out' }, 0);
+        timeline.to(lego.rotation, { y: Math.PI * 2, duration: 1, ease: 'power3.out' }, 0);
+        timeline.to(lego.position, { y: lego.position.y + 1.5, duration: 1, ease: 'power3.out' }, 0);
+        timeline.to(lego.position, { y: altitude, duration: 0.8, ease: 'power4.in' }, 0.5);
+        timeline.call(() => {
+            this.playFloorImpact();
+        }, null);
 
         // Store altitude on grid data buffer
         this.gridData[this.mouseGridFlatIndex] += 1;
@@ -243,9 +253,16 @@ export default class SceneLegoBuilder extends Scene {
         return lego;
     }
 
-    raycast() {
-        if (this.isCameraMoving) return;
+    playFloorImpact() {
+        this.floorImpactTimeline?.kill();
 
+        this.floorImpactTimeline = new gsap.timeline();
+        // this.floorImpactTimeline.timeScale(2);
+        this.floorImpactTimeline.fromTo(this.position, { y: 0 }, { y: -0.08, duration: 0.3, ease: 'power3.out' });
+        this.floorImpactTimeline.to(this.position, { y: 0, duration: 0.3, ease: 'sine.out' });
+    }
+
+    raycast() {
         this.raycaster.setFromCamera(this.pointer, this.camera);
         const intersects = this.raycaster.intersectObjects([this.floor], false);
 
@@ -302,7 +319,9 @@ export default class SceneLegoBuilder extends Scene {
         }
     }
 
-    update() {}
+    update() {
+        this.cameras.debug.controls.update();
+    }
 
     setupEventListeners() {
         document.body.addEventListener('keydown', this.keydownHandler.bind(this));
@@ -339,17 +358,25 @@ export default class SceneLegoBuilder extends Scene {
     }
 
     mousemoveHandler(e) {
+        if (!this.isReady) return;
+
         this.pointer.x = (e.clientX / this.renderWidth) * 2 - 1;
         this.pointer.y = -(e.clientY / this.renderHeight) * 2 + 1;
+
+        if (this.isPointerDown) return;
 
         this.raycast();
     }
 
     pointerdownHandler(e) {
+        this.isPointerDown = true;
+
         this.pointerStartPosition = { x: e.clientX, y: e.clientY };
     }
 
     pointerupHandler(e) {
+        this.isPointerDown = false;
+
         const deltaX = e.clientX - this.pointerStartPosition.x;
         const deltaY = e.clientY - this.pointerStartPosition.y;
         const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
@@ -359,13 +386,9 @@ export default class SceneLegoBuilder extends Scene {
         this.spawnLego(1);
     }
 
-    controlsChangeHandler(e) {
-        this.isCameraMoving = true;
-    }
+    controlsChangeHandler(e) {}
 
-    controlsEndHandler() {
-        this.isCameraMoving = false;
-    }
+    controlsEndHandler() {}
 
     /**
      * Debugging
