@@ -43,6 +43,8 @@ export default class Lego extends Object3D {
             if (!child.isMesh) return;
             child.material = this.material;
             child.userData.physics = { mass: 1 };
+            child.castShadow = true;
+            child.receiveShadow = true;
         });
         this.container.add(this.model);
     }
@@ -58,6 +60,8 @@ export default class Lego extends Object3D {
         this.container.add(cube);
 
         cube.userData.physics = { mass: 1 };
+        cube.castShadow = true;
+        cube.receiveShadow = true;
 
         return cube;
     }
@@ -73,6 +77,8 @@ export default class Lego extends Object3D {
             const geometry = new CylinderGeometry(radius, radius, height, 32, 1);
             const mesh = new Mesh(geometry, this.material);
             mesh.position.set(-this.size / 2 + i + 0.5, offsetY, 0);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
             this.container.add(mesh);
             cylinders.push(mesh);
         }

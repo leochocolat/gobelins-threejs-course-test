@@ -24,6 +24,10 @@ class WebGLApplication {
 
         renderer.setClearColor(0xf1f1f1, 1);
 
+        // Shadows
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = PCFShadowMap;
+
         return renderer;
     }
 

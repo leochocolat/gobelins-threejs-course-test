@@ -15,6 +15,7 @@ import {
     Raycaster,
     RepeatWrapping,
     Scene,
+    ShadowMaterial,
     Vector2,
 } from 'three';
 import { GLTFLoader, OrbitControls } from 'three/examples/jsm/Addons.js';
@@ -48,6 +49,7 @@ export default class SceneLegoBuilder extends Scene {
 
         this.floorTexture = this.createFloorTexture();
         this.floor = this.createFloor();
+        this.shadowFloor = this.createShadowFloor();
 
         this.lights = this.createLights();
 
@@ -89,7 +91,7 @@ export default class SceneLegoBuilder extends Scene {
     }
 
     createFog() {
-        const fog = new Fog(this.background, 10, 40);
+        const fog = new Fog('white', 10, 40);
         return fog;
     }
 
@@ -141,15 +143,33 @@ export default class SceneLegoBuilder extends Scene {
     }
 
     createFloor() {
-        // const geometry = new PlaneGeometry(this.gridSize, this.gridSize, 1);
-        const geometry = new BoxGeometry(this.gridSize, 0.01, this.gridSize);
-        const material = new MeshBasicMaterial({ map: this.floorTexture });
+        const geometry = new PlaneGeometry(this.gridSize, this.gridSize, 1);
+        // const geometry = new BoxGeometry(this.gridSize, 0.01, this.gridSize);
+        const material = new MeshBasicMaterial({ map: this.floorTexture, fog: true });
         const mesh = new Mesh(geometry, material);
-        // mesh.rotation.x = -Math.PI / 2;
+        mesh.rotation.x = -Math.PI / 2;
         mesh.position.y = -0.5;
-        this.add(mesh);
+
+        mesh.receiveShadow = false;
 
         mesh.userData.physics = { mass: 0 };
+
+        this.add(mesh);
+
+        return mesh;
+    }
+
+    createShadowFloor() {
+        const geometry = new PlaneGeometry(this.gridSize, this.gridSize, 1);
+        const material = new ShadowMaterial({ opacity: 0.3 });
+        const mesh = new Mesh(geometry, material);
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.position.y = -0.5 + 0.001;
+
+        mesh.castShadow = false;
+        mesh.receiveShadow = true;
+
+        this.add(mesh);
 
         return mesh;
     }
@@ -163,6 +183,20 @@ export default class SceneLegoBuilder extends Scene {
         lights.directional = new DirectionalLight(0xffffff, 2);
         lights.directional.position.set(10, 10, 5);
         lights.directional.target.position.set(0, 0, 0);
+
+        // Shadows
+        lights.directional.castShadow = true;
+        lights.directional.shadow.camera.top = 10;
+        lights.directional.shadow.camera.bottom = -10;
+        lights.directional.shadow.camera.left = -10;
+        lights.directional.shadow.camera.right = 10;
+        lights.directional.shadow.camera.near = 1;
+        lights.directional.shadow.camera.far = 100;
+        lights.directional.shadow.bias = 0.0001;
+        lights.directional.shadow.mapSize.width = 2048;
+        lights.directional.shadow.mapSize.height = 2048;
+        lights.directional.shadow.intensity = 1;
+
         this.add(lights.directional);
 
         return lights;
