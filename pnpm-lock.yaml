@@ -22,6 +22,9 @@ devDependencies:
   vite:
     specifier: ^8.3.3
     version: 8.3.3
+  vite-plugin-glsl:
+    specifier: ^1.6.2
+    version: 1.6.2(vite@8.3.3)
 
 packages:
 
@@ -390,6 +393,22 @@ packages:
   /tweakpane@4.0.5:
     resolution: {integrity: sha512-rxEXdSI+ArlG1RyO6FghC4ZUX8JkEfz8F3v1JuteXSV0pEtHJzyo07fcDG+NsJfN5L39kSbCYbB9cBGHyuI/tQ==}
     dev: false
+
+  /vite-plugin-glsl@1.6.2(vite@8.3.3):
+    resolution: {integrity: sha512-/WSsBiKg6HcBXutxtynJ9CBJImv4m6Fa3bAGLCQXeSgboiH1VVjL3ok42MeGIpc4NzOKFa1F0s+09J03M+jepw==}
+    engines: {node: '>= 20.17.0', npm: '>= 10.8.3'}
+    peerDependencies:
+      '@rollup/pluginutils': ^5.x
+      esbuild: '>= 0.25'
+      vite: '>= 3.x'
+    peerDependenciesMeta:
+      '@rollup/pluginutils':
+        optional: true
+      esbuild:
+        optional: true
+    dependencies:
+      vite: 8.3.3
+    dev: true
 
   /vite@8.3.3:
     resolution: {integrity: sha512-cTAldKPImjg6c+gk48U19POPn3GCBzZwpdsN8ZMEEcbpes+6/wvfqUd0C2y3qYY4wsj8PwgFwrZ/1jBPVttMSg==}

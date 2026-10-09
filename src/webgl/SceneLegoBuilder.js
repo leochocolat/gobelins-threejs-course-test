@@ -2,6 +2,7 @@ import {
     AmbientLight,
     BoxGeometry,
     CanvasTexture,
+    Color,
     DirectionalLight,
     EquirectangularReflectionMapping,
     FloatType,
@@ -36,7 +37,7 @@ export default class SceneLegoBuilder extends Scene {
         this.renderHeight = options.renderHeight;
         this.debugger = options.debugger;
 
-        this.background = 0xf1f1f1;
+        this.background = new Color('#f1f1f1');
         this.fog = this.createFog();
 
         this.cameras = this.createCameras();
@@ -87,7 +88,7 @@ export default class SceneLegoBuilder extends Scene {
             lego3: gltf.scene.children.find((item) => item.name === 'Lego_3'),
         };
 
-        this.physics = await RapierPhysics();
+        // this.physics = await RapierPhysics();
 
         this.start();
     }
@@ -97,7 +98,7 @@ export default class SceneLegoBuilder extends Scene {
     }
 
     createFog() {
-        const fog = new Fog('white', 10, 40);
+        const fog = new Fog(this.background, 10, 40);
         return fog;
     }
 
@@ -105,7 +106,7 @@ export default class SceneLegoBuilder extends Scene {
         const cameras = {};
 
         cameras.main = new PerspectiveCamera(75, this.renderWidth / this.renderHeight, 0.1, 1000);
-        cameras.main.position.set(-4, 3, 10);
+        cameras.main.position.set(-4, 2, 10);
         cameras.main.lookAt(0, 0, 0);
 
         cameras.debug = new PerspectiveCamera(45, this.renderWidth / this.renderHeight, 0.1, 1000);
@@ -114,7 +115,7 @@ export default class SceneLegoBuilder extends Scene {
         cameras.debug.controls.enableDamping = true;
         cameras.debug.controls.dampingFactor = 0.05;
         cameras.debug.controls.maxPolarAngle = Math.PI / 2;
-        cameras.debug.position.set(-4, 3, 10);
+        cameras.debug.position.set(-4, 2.5, 10);
         cameras.debug.controls.update();
 
         return cameras;
