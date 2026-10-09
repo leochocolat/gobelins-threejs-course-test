@@ -20,14 +20,8 @@ import {
 import { GLTFLoader, OrbitControls } from 'three/examples/jsm/Addons.js';
 import { gsap } from 'gsap';
 import Lego from './Lego';
-import { CustomBounce } from 'gsap/CustomBounce';
-import { CustomEase } from 'gsap/CustomEase';
 import LegoPropsManager from './LegoPropsManager';
 import { RapierPhysics } from 'three/addons/physics/RapierPhysics.js';
-
-gsap.registerPlugin(CustomEase, CustomBounce);
-
-CustomBounce.create('bounce', { strength: 0.1 });
 
 export default class SceneLegoBuilder extends Scene {
     constructor(options = {}) {
@@ -39,7 +33,6 @@ export default class SceneLegoBuilder extends Scene {
         this.debugger = options.debugger;
 
         this.background = 0xf1f1f1;
-
         this.fog = this.createFog();
 
         this.cameras = this.createCameras();
@@ -49,23 +42,24 @@ export default class SceneLegoBuilder extends Scene {
         this.legoPropsManager = new LegoPropsManager();
 
         this.gridSize = 51; // Must be an ODD number
+        this.gridCellX = Math.floor(this.gridSize / 2);
+        this.gridCellY = Math.floor(this.gridSize / 2);
         this.gridData = this.createGridData();
+
         this.floorTexture = this.createFloorTexture();
         this.floor = this.createFloor();
+
         this.lights = this.createLights();
+
         this.ghostLego = this.createGhostLego();
         this.ghostCell = this.createGhoseCell();
         this.updateGhostSize(this.legoPropsManager.size);
-
-        this.altitude = 0;
 
         this.pointer = new Vector2();
         this.raycaster = new Raycaster();
         this.mouseGridPosition = new Vector2();
         this.mouseGridCellX = null;
         this.mouseGridCellY = null;
-        this.gridCellX = Math.floor(this.gridSize / 2);
-        this.gridCellY = Math.floor(this.gridSize / 2);
         this.mouseGridFlatIndex = this.getGridFlatIndex(this.mouseGridCellX, this.mouseGridCellY);
 
         this.setupEventListeners();
@@ -85,16 +79,13 @@ export default class SceneLegoBuilder extends Scene {
             lego3: gltf.scene.children.find((item) => item.name === 'Lego_3'),
         };
 
+        this.physics = await RapierPhysics();
+
         this.start();
     }
 
     start() {
         this.isReady = true;
-
-        // Init with 3 legos
-        this.spawnLego();
-        // this.spawnLego();
-        // this.spawnLego();
     }
 
     createFog() {
@@ -256,8 +247,9 @@ export default class SceneLegoBuilder extends Scene {
         this.add(lego);
 
         const timeline = new gsap.timeline();
+        timeline.timeScale(1.5);
         timeline.fromTo(lego.scale, { x: 0, y: 0, z: 0 }, { x: 1, y: 1, z: 1, duration: 0.5, ease: 'power3.out' }, 0);
-        timeline.to(lego.model.rotation, { y: Math.PI * 2, duration: 1, ease: 'power3.out' }, 0);
+        if (lego.model) timeline.to(lego.model.rotation, { y: Math.PI * 2, duration: 1, ease: 'power3.out' }, 0);
         timeline.to(lego.position, { y: lego.position.y + 1.5, duration: 1, ease: 'power3.out' }, 0);
         timeline.to(lego.position, { y: altitude, duration: 0.8, ease: 'power4.in' }, 0.5);
         timeline.call(() => {
@@ -521,8 +513,7 @@ export default class SceneLegoBuilder extends Scene {
             });
 
         folder.addButton({ title: 'Test physics' }).on('click', async () => {
-            // this.physics = await RapierPhysics();
-            // this.physics.addScene(this);
+            this.physics?.addScene(this);
         });
 
         return folder;

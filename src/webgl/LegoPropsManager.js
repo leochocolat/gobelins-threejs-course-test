@@ -8,7 +8,7 @@ function randomIntFromRange(min, max) {
 
 export default class LegoPropsManager {
     constructor() {
-        this.colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
+        this.colors = [0xff0000, 0x0000ff, 0xffff00];
         this.rotationStep = Math.PI / 2;
         this.size = 1;
 
