@@ -7,6 +7,7 @@ import {
     MeshMatcapMaterial,
     MeshNormalMaterial,
     MeshPhongMaterial,
+    MeshPhysicalMaterial,
     Object3D,
     TextureLoader,
 } from 'three';
@@ -33,7 +34,21 @@ export default class Lego extends Object3D {
     createMaterial() {
         // const matcapTexture = new TextureLoader().load('public/matcap-1.png');
         // const material = new MeshMatcapMaterial({ color: this.color, matcap: matcapTexture });
-        const material = new MeshPhongMaterial({ color: this.color, shininess: 500, specular: 0xffffff });
+
+        // const material = new MeshPhongMaterial({
+        //     color: this.color,
+        //     shininess: 500,
+        //     specular: 0xffffff
+        // });
+
+        const material = new MeshPhysicalMaterial({
+            color: this.color,
+            roughness: 0.1,
+            metalness: 0.1,
+            clearcoat: 0.1,
+            clearcoatRoughness: 0.1,
+        });
+
         return material;
     }
 

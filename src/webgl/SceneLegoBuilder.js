@@ -3,6 +3,8 @@ import {
     BoxGeometry,
     CanvasTexture,
     DirectionalLight,
+    EquirectangularReflectionMapping,
+    FloatType,
     Fog,
     MathUtils,
     Mesh,
@@ -12,13 +14,14 @@ import {
     Object3D,
     PerspectiveCamera,
     PlaneGeometry,
+    PMREMGenerator,
     Raycaster,
     RepeatWrapping,
     Scene,
     ShadowMaterial,
     Vector2,
 } from 'three';
-import { GLTFLoader, OrbitControls } from 'three/examples/jsm/Addons.js';
+import { GLTFLoader, HDRLoader, OrbitControls } from 'three/examples/jsm/Addons.js';
 import { gsap } from 'gsap';
 import Lego from './Lego';
 import LegoPropsManager from './LegoPropsManager';
@@ -53,12 +56,15 @@ export default class SceneLegoBuilder extends Scene {
 
         this.lights = this.createLights();
 
+        this.envmap = this.createEnvmap();
+
         this.ghostLego = this.createGhostLego();
         this.ghostCell = this.createGhoseCell();
         this.updateGhostSize(this.legoPropsManager.size);
 
         this.pointer = new Vector2();
         this.raycaster = new Raycaster();
+        this.isRayIntersecting = false;
         this.mouseGridPosition = new Vector2();
         this.mouseGridCellX = null;
         this.mouseGridCellY = null;
@@ -202,6 +208,18 @@ export default class SceneLegoBuilder extends Scene {
         return lights;
     }
 
+    async createEnvmap() {
+        const loader = new HDRLoader();
+        loader.setDataType(FloatType);
+
+        loader.load('/01.hdr', (texture) => {
+            texture.mapping = EquirectangularReflectionMapping;
+            const generator = new PMREMGenerator(this.renderer);
+            this.environment = generator.fromEquirectangular(texture, null).texture;
+            generator.dispose();
+        });
+    }
+
     createGhostLego() {
         const container = new Object3D();
 
@@ -310,8 +328,11 @@ export default class SceneLegoBuilder extends Scene {
         if (!intersects[0]) {
             this.ghostLego.visible = false;
             this.ghostCell.visible = false;
+            this.isRayIntersecting = false;
             return;
         }
+
+        this.isRayIntersecting = true;
 
         this.ghostLego.visible = true;
         this.ghostCell.visible = true;
@@ -519,6 +540,8 @@ export default class SceneLegoBuilder extends Scene {
         const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
         if (dist > 2) return;
+
+        if (!this.isRayIntersecting) return;
 
         this.spawnLego();
     }
