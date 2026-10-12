@@ -19,6 +19,7 @@ import {
     Raycaster,
     RepeatWrapping,
     Scene,
+    ShaderMaterial,
     ShadowMaterial,
     Vector2,
 } from 'three';
@@ -26,7 +27,8 @@ import { GLTFLoader, HDRLoader, OrbitControls } from 'three/examples/jsm/Addons.
 import { gsap } from 'gsap';
 import Lego from './Lego';
 import LegoPropsManager from './LegoPropsManager';
-import { RapierPhysics } from 'three/addons/physics/RapierPhysics.js';
+import floorVertexShader from './shaders/floor/vertex.glsl';
+import floorFragmentShader from './shaders/floor/fragment.glsl';
 
 export default class SceneLegoBuilder extends Scene {
     constructor(options = {}) {
@@ -38,7 +40,7 @@ export default class SceneLegoBuilder extends Scene {
         this.debugger = options.debugger;
 
         this.background = new Color('#f1f1f1');
-        this.fog = this.createFog();
+        // this.fog = this.createFog();
 
         this.cameras = this.createCameras();
         this.activeCamera = 'debug';
@@ -91,6 +93,8 @@ export default class SceneLegoBuilder extends Scene {
         // this.physics = await RapierPhysics();
 
         this.start();
+
+        this.spawnLego();
     }
 
     start() {
@@ -152,7 +156,27 @@ export default class SceneLegoBuilder extends Scene {
     createFloor() {
         const geometry = new PlaneGeometry(this.gridSize, this.gridSize, 1);
         // const geometry = new BoxGeometry(this.gridSize, 0.01, this.gridSize);
-        const material = new MeshBasicMaterial({ map: this.floorTexture, fog: true });
+        // const material = new MeshBasicMaterial({ map: this.floorTexture, fog: true });
+
+        const material = new ShaderMaterial({
+            vertexShader: floorVertexShader,
+            fragmentShader: floorFragmentShader,
+            uniforms: {
+                uMap: { value: this.floorTexture },
+                uGridSize: { value: this.gridSize },
+                uColor1: { value: new Color('#f1f1f1') },
+                uColor2: { value: new Color('#bfbfbf') },
+                uFogColor: { value: new Color('#f1f1f1') },
+                uAnimationProgress: { value: 0 },
+                uAnimationColor: { value: new Color('white') },
+                uAnimationOffset: { value: new Vector2(0, 0) },
+                uPulseMaxRadius: { value: 30 },
+                uPulseThickness: { value: 3 },
+                uPulseFade: { value: 1 },
+                uPulseMinIntensity: { value: 0.2 },
+            },
+        });
+
         const mesh = new Mesh(geometry, material);
         mesh.rotation.x = -Math.PI / 2;
         mesh.position.y = -0.5;
@@ -306,19 +330,29 @@ export default class SceneLegoBuilder extends Scene {
         timeline.to(lego.position, { y: lego.position.y + 1.5, duration: 1, ease: 'power3.out' }, 0);
         timeline.to(lego.position, { y: altitude, duration: 0.8, ease: 'power4.in' }, 0.5);
         timeline.call(() => {
-            this.playFloorImpact();
+            this.playFloorImpact(color, lego.position);
         }, null);
 
         this.updateAltitude(this.gridCellX, this.gridCellY, size, rotation);
 
         return lego;
     }
+    thi;
 
-    playFloorImpact() {
+    playFloorImpact(color, position) {
         this.floorImpactTimeline?.kill();
 
+        this.floor.material.uniforms.uAnimationColor.value.set(color);
+        this.floor.material.uniforms.uAnimationOffset.value.set(position.x, position.z);
+
         this.floorImpactTimeline = new gsap.timeline();
-        this.floorImpactTimeline.fromTo(this.position, { y: 0 }, { y: -0.08, duration: 0.3, ease: 'power3.out' });
+        this.floorImpactTimeline.fromTo(
+            this.floor.material.uniforms.uAnimationProgress,
+            { value: 0 },
+            { value: 1, duration: 1.5, ease: 'sine.out' },
+            0,
+        );
+        this.floorImpactTimeline.fromTo(this.position, { y: 0 }, { y: -0.08, duration: 0.3, ease: 'power3.out' }, 0);
         this.floorImpactTimeline.to(this.position, { y: 0, duration: 0.3, ease: 'sine.out' });
     }
 
