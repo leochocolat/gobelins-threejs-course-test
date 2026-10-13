@@ -5,11 +5,31 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Lego Builder</title>
         <link rel="icon" type="image/png" href="/favicon.png" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=swap" rel="stylesheet" />
         <link rel="stylesheet" href="src/style.css" />
     </head>
 
     <body>
         <canvas></canvas>
+
+        <footer class="hints" aria-label="Controls">
+            <p class="hint">
+                <kbd class="key key--red key--wide" data-code="Space">Space</kbd>
+                Change color
+            </p>
+            <p class="hint">
+                <kbd class="key key--blue" data-code="ArrowLeft" aria-label="Left arrow">←</kbd>
+                <kbd class="key key--blue" data-code="ArrowRight" aria-label="Right arrow">→</kbd>
+                Rotate
+            </p>
+            <p class="hint">
+                <kbd class="key key--yellow" data-code="ArrowUp" aria-label="Up arrow">↑</kbd>
+                <kbd class="key key--yellow" data-code="ArrowDown" aria-label="Down arrow">↓</kbd>
+                Brick size
+            </p>
+        </footer>
         <script type="module" src="src/main.js"></script>
     </body>
 </html>
