@@ -7,7 +7,7 @@ body {
     overflow: hidden;
 }
 
-canvas {
+body > canvas {
     position: absolute;
     left: 0;
     top: 0;

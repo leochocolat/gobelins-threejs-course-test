@@ -20,7 +20,7 @@ export default class Lego extends Object3D {
         this.color = options.color || 0xff0000;
         this.model = options.model;
         this.physics = options.physics;
-        this.material = options.material || this.createMaterial();
+        this.material = options.material || Lego.createMaterial(this.color);
         this.material.color.set(this.color);
 
         this.container = new Object3D();
@@ -31,7 +31,7 @@ export default class Lego extends Object3D {
         // this.createMeshFromPrimitives();
     }
 
-    createMaterial() {
+    static createMaterial(color = 0xff0000) {
         // const matcapTexture = new TextureLoader().load('public/matcap-1.png');
         // const material = new MeshMatcapMaterial({ color: this.color, matcap: matcapTexture });
 
@@ -42,7 +42,7 @@ export default class Lego extends Object3D {
         // });
 
         const material = new MeshPhysicalMaterial({
-            color: this.color,
+            color,
             roughness: 0.1,
             metalness: 0.1,
             clearcoat: 0.1,

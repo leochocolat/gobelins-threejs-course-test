@@ -1,0 +1,76 @@
+{
+    "renderer": {
+        "toneMapping": "None",
+        "exposure": 1,
+        "shadowMap": {
+            "enabled": true,
+            "type": "PCF"
+        }
+    },
+    "scene": {
+        "background": "#f1f1f1",
+        "cameras": {
+            "active": "debug",
+            "main": {
+                "frustumSize": 15
+            },
+            "debug": {
+                "fov": 45
+            }
+        },
+        "lights": {
+            "ambient": {
+                "color": "#ffffff",
+                "intensity": 1.5
+            },
+            "directional": {
+                "color": "#ffffff",
+                "intensity": 2,
+                "position": { "x": 10, "y": 10, "z": 5 }
+            },
+            "shadow": {
+                "enabled": true,
+                "intensity": 1,
+                "floorOpacity": 0.3,
+                "bias": 0.0001,
+                "normalBias": 0,
+                "radius": 1,
+                "mapSize": 2048,
+                "cameraSize": 10,
+                "near": 1,
+                "far": 100
+            }
+        },
+        "environment": {
+            "enabled": true,
+            "intensity": 1,
+            "rotation": 0
+        },
+        "legos": {
+            "material": {
+                "roughness": 0.1,
+                "metalness": 0.1,
+                "clearcoat": 0.1,
+                "clearcoatRoughness": 0.1
+            },
+            "palette": ["#ff0000", "#0000ff", "#ffff00"]
+        },
+        "floor": {
+            "color1": "#f1f1f1",
+            "color2": "#bfbfbf",
+            "fogStart": 0,
+            "fogEnd": 0.5,
+            "pulse": {
+                "maxRadius": 30,
+                "thickness": 3,
+                "fade": 1,
+                "minIntensity": 0.2
+            }
+        },
+        "ghost": {
+            "legoOpacity": 0.5,
+            "legoWireframe": false,
+            "cellOpacity": 0.1
+        }
+    }
+}

@@ -1,9 +1,11 @@
 import {
     AmbientLight,
     BoxGeometry,
+    CameraHelper,
     CanvasTexture,
     Color,
     DirectionalLight,
+    DirectionalLightHelper,
     EquirectangularReflectionMapping,
     FloatType,
     Fog,
@@ -13,6 +15,7 @@ import {
     MeshPhongMaterial,
     NearestFilter,
     Object3D,
+    OrthographicCamera,
     PerspectiveCamera,
     PlaneGeometry,
     PMREMGenerator,
@@ -29,6 +32,7 @@ import Lego from './Lego';
 import LegoPropsManager from './LegoPropsManager';
 import floorVertexShader from './shaders/floor/vertex.glsl';
 import floorFragmentShader from './shaders/floor/fragment.glsl';
+import { keysAsOptions } from './utils/debug';
 
 export default class SceneLegoBuilder extends Scene {
     constructor(options = {}) {
@@ -38,15 +42,16 @@ export default class SceneLegoBuilder extends Scene {
         this.renderWidth = options.renderWidth;
         this.renderHeight = options.renderHeight;
         this.debugger = options.debugger;
+        this.settings = options.settings;
 
-        this.background = new Color('#f1f1f1');
+        this.background = new Color();
         // this.fog = this.createFog();
 
         this.cameras = this.createCameras();
-        this.activeCamera = 'debug';
-        this.camera = this.cameras[this.activeCamera];
 
-        this.legoPropsManager = new LegoPropsManager();
+        this.legoPropsManager = new LegoPropsManager({ colors: this.settings.legos.palette });
+        this.legoSharedMaterial = Lego.createMaterial();
+        this.legos = [];
 
         this.gridSize = 51; // Must be an ODD number
         this.gridCellX = Math.floor(this.gridSize / 2);
@@ -58,6 +63,7 @@ export default class SceneLegoBuilder extends Scene {
         this.shadowFloor = this.createShadowFloor();
 
         this.lights = this.createLights();
+        this.helpers = this.createHelpers();
 
         this.envmap = this.createEnvmap();
 
@@ -72,6 +78,8 @@ export default class SceneLegoBuilder extends Scene {
         this.mouseGridCellX = null;
         this.mouseGridCellY = null;
         this.mouseGridFlatIndex = this.getGridFlatIndex(this.mouseGridCellX, this.mouseGridCellY);
+
+        this.applySettings();
 
         this.setupEventListeners();
 
@@ -109,8 +117,9 @@ export default class SceneLegoBuilder extends Scene {
     createCameras() {
         const cameras = {};
 
-        cameras.main = new PerspectiveCamera(75, this.renderWidth / this.renderHeight, 0.1, 1000);
-        cameras.main.position.set(-4, 2, 10);
+        // Isometric: orthographic projection, looking at the origin along the (-1, 1, 1) diagonal
+        cameras.main = new OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+        cameras.main.position.set(-20, 20, 20);
         cameras.main.lookAt(0, 0, 0);
 
         cameras.debug = new PerspectiveCamera(45, this.renderWidth / this.renderHeight, 0.1, 1000);
@@ -164,16 +173,18 @@ export default class SceneLegoBuilder extends Scene {
             uniforms: {
                 uMap: { value: this.floorTexture },
                 uGridSize: { value: this.gridSize },
-                uColor1: { value: new Color('#f1f1f1') },
-                uColor2: { value: new Color('#bfbfbf') },
-                uFogColor: { value: new Color('#f1f1f1') },
+                uColor1: { value: new Color() },
+                uColor2: { value: new Color() },
+                uFogColor: { value: new Color() },
+                uFogStart: { value: 0 },
+                uFogEnd: { value: 0 },
                 uAnimationProgress: { value: 0 },
                 uAnimationColor: { value: new Color('white') },
                 uAnimationOffset: { value: new Vector2(0, 0) },
-                uPulseMaxRadius: { value: 30 },
-                uPulseThickness: { value: 3 },
-                uPulseFade: { value: 1 },
-                uPulseMinIntensity: { value: 0.2 },
+                uPulseMaxRadius: { value: 0 },
+                uPulseThickness: { value: 0 },
+                uPulseFade: { value: 0 },
+                uPulseMinIntensity: { value: 0 },
             },
         });
 
@@ -192,7 +203,7 @@ export default class SceneLegoBuilder extends Scene {
 
     createShadowFloor() {
         const geometry = new PlaneGeometry(this.gridSize, this.gridSize, 1);
-        const material = new ShadowMaterial({ opacity: 0.3 });
+        const material = new ShadowMaterial();
         const mesh = new Mesh(geometry, material);
         mesh.rotation.x = -Math.PI / 2;
         mesh.position.y = -0.5 + 0.001;
@@ -208,29 +219,28 @@ export default class SceneLegoBuilder extends Scene {
     createLights() {
         const lights = {};
 
-        lights.ambient = new AmbientLight(0xffffff, 1.5);
+        lights.ambient = new AmbientLight();
         this.add(lights.ambient);
 
-        lights.directional = new DirectionalLight(0xffffff, 2);
-        lights.directional.position.set(10, 10, 5);
+        lights.directional = new DirectionalLight();
         lights.directional.target.position.set(0, 0, 0);
-
-        // Shadows
-        lights.directional.castShadow = true;
-        lights.directional.shadow.camera.top = 10;
-        lights.directional.shadow.camera.bottom = -10;
-        lights.directional.shadow.camera.left = -10;
-        lights.directional.shadow.camera.right = 10;
-        lights.directional.shadow.camera.near = 1;
-        lights.directional.shadow.camera.far = 100;
-        lights.directional.shadow.bias = 0.0001;
-        lights.directional.shadow.mapSize.width = 2048;
-        lights.directional.shadow.mapSize.height = 2048;
-        lights.directional.shadow.intensity = 1;
-
         this.add(lights.directional);
 
         return lights;
+    }
+
+    createHelpers() {
+        const helpers = {};
+
+        helpers.directional = new DirectionalLightHelper(this.lights.directional, 1);
+        helpers.directional.visible = false;
+        this.add(helpers.directional);
+
+        helpers.shadowCamera = new CameraHelper(this.lights.directional.shadow.camera);
+        helpers.shadowCamera.visible = false;
+        this.add(helpers.shadowCamera);
+
+        return helpers;
     }
 
     async createEnvmap() {
@@ -240,7 +250,8 @@ export default class SceneLegoBuilder extends Scene {
         loader.load('/01.hdr', (texture) => {
             texture.mapping = EquirectangularReflectionMapping;
             const generator = new PMREMGenerator(this.renderer);
-            this.environment = generator.fromEquirectangular(texture, null).texture;
+            this.envmapTexture = generator.fromEquirectangular(texture, null).texture;
+            this.applyEnvironmentSettings();
             generator.dispose();
         });
     }
@@ -252,8 +263,6 @@ export default class SceneLegoBuilder extends Scene {
 
         const material = new MeshBasicMaterial({
             color: this.legoPropsManager.color,
-            wireframe: false,
-            opacity: 0.5,
             transparent: true,
             depthTest: false,
             depthWrite: false,
@@ -272,7 +281,6 @@ export default class SceneLegoBuilder extends Scene {
 
         const material = new MeshBasicMaterial({
             color: this.legoPropsManager.color,
-            opacity: 0.1,
             transparent: true,
             depthTest: false,
             depthWrite: false,
@@ -285,6 +293,11 @@ export default class SceneLegoBuilder extends Scene {
         this.add(mesh);
 
         return mesh;
+    }
+
+    setGhostColor(color) {
+        this.ghostLego.children[0].material.color.set(color);
+        this.ghostCell.material.color.set(color);
     }
 
     updateGhostSize(size) {
@@ -302,11 +315,11 @@ export default class SceneLegoBuilder extends Scene {
         const lego = new Lego({
             size,
             color,
-            material: this.legoSharedMaterial?.clone(),
+            material: this.legoSharedMaterial.clone(),
             model: this.models[`lego${size}`].clone(),
         });
 
-        if (!this.legoSharedMaterial) this.legoSharedMaterial = lego.material;
+        this.legos.push(lego);
 
         if (this.mouseGridCellX !== null && this.mouseGridCellY !== null) {
             this.gridCellX = this.mouseGridCellX;
@@ -489,9 +502,20 @@ export default class SceneLegoBuilder extends Scene {
         this.renderHeight = renderHeight;
 
         for (const cameraKey in this.cameras) {
-            this.cameras[cameraKey].aspect = this.renderWidth / this.renderHeight;
-            this.cameras[cameraKey].updateProjectionMatrix();
+            const camera = this.cameras[cameraKey];
+            if (camera.isOrthographicCamera) this.updateOrthographicFrustum(camera);
+            else camera.aspect = this.renderWidth / this.renderHeight;
+            camera.updateProjectionMatrix();
         }
+    }
+
+    updateOrthographicFrustum(camera) {
+        const aspect = this.renderWidth / this.renderHeight;
+        camera.top = camera.frustumSize / 2;
+        camera.bottom = -camera.frustumSize / 2;
+        camera.left = (-camera.frustumSize * aspect) / 2;
+        camera.right = (camera.frustumSize * aspect) / 2;
+        camera.updateProjectionMatrix();
     }
 
     update() {
@@ -512,9 +536,7 @@ export default class SceneLegoBuilder extends Scene {
 
         if (event.code === 'Space') {
             const color = this.legoPropsManager.nextColor();
-
-            this.ghostLego.children[0].material.color.set(color);
-            this.ghostCell.material.color.set(color);
+            this.setGhostColor(color);
         }
 
         if (event.code === 'ArrowLeft') {
@@ -586,6 +608,124 @@ export default class SceneLegoBuilder extends Scene {
     controlsEndHandler() {}
 
     /**
+     * Settings
+     */
+    applySettings() {
+        this.applyBackgroundSettings();
+        this.applyCamerasSettings();
+        this.applyLightsSettings();
+        this.applyShadowSettings();
+        this.applyEnvironmentSettings();
+        this.applyLegosSettings();
+        this.applyFloorSettings();
+        this.applyGhostSettings();
+    }
+
+    applyBackgroundSettings() {
+        // Background is linked to the floor fog so the floor keeps fading into it
+        this.background.set(this.settings.background);
+        this.floor.material.uniforms.uFogColor.value.set(this.settings.background);
+    }
+
+    applyCamerasSettings() {
+        const settings = this.settings.cameras;
+
+        this.camera = this.cameras[settings.active];
+
+        this.cameras.main.frustumSize = settings.main.frustumSize;
+        this.updateOrthographicFrustum(this.cameras.main);
+
+        this.cameras.debug.fov = settings.debug.fov;
+        this.cameras.debug.updateProjectionMatrix();
+    }
+
+    applyLightsSettings() {
+        const { ambient, directional } = this.settings.lights;
+
+        this.lights.ambient.color.set(ambient.color);
+        this.lights.ambient.intensity = ambient.intensity;
+
+        this.lights.directional.color.set(directional.color);
+        this.lights.directional.intensity = directional.intensity;
+        this.lights.directional.position.copy(directional.position);
+
+        this.helpers.directional.update();
+        this.helpers.shadowCamera.update();
+    }
+
+    applyShadowSettings() {
+        const settings = this.settings.lights.shadow;
+        const { directional } = this.lights;
+        const { shadow } = directional;
+
+        directional.castShadow = settings.enabled;
+        shadow.intensity = settings.intensity;
+        shadow.bias = settings.bias;
+        shadow.normalBias = settings.normalBias;
+        shadow.radius = settings.radius;
+        this.shadowFloor.material.opacity = settings.floorOpacity;
+
+        // The shadow render target has to be recreated to change its size
+        if (shadow.mapSize.width !== settings.mapSize) {
+            shadow.mapSize.set(settings.mapSize, settings.mapSize);
+            shadow.map?.dispose();
+            shadow.map = null;
+        }
+
+        shadow.camera.top = settings.cameraSize;
+        shadow.camera.right = settings.cameraSize;
+        shadow.camera.bottom = -settings.cameraSize;
+        shadow.camera.left = -settings.cameraSize;
+        shadow.camera.near = settings.near;
+        shadow.camera.far = settings.far;
+        shadow.camera.updateProjectionMatrix();
+
+        this.helpers.shadowCamera.update();
+    }
+
+    applyEnvironmentSettings() {
+        const settings = this.settings.environment;
+
+        this.environment = settings.enabled ? this.envmapTexture || null : null;
+        this.environmentIntensity = settings.intensity;
+        this.environmentRotation.y = settings.rotation;
+    }
+
+    applyLegosSettings() {
+        const { material } = this.settings.legos;
+
+        // Updates the template material and every lego already spawned
+        Object.assign(this.legoSharedMaterial, material);
+        this.legos.forEach((lego) => Object.assign(lego.material, material));
+
+        // The palette array is shared with the LegoPropsManager, only the ghost needs a refresh
+        this.setGhostColor(this.legoPropsManager.color);
+    }
+
+    applyFloorSettings() {
+        const settings = this.settings.floor;
+        const { uniforms } = this.floor.material;
+
+        uniforms.uColor1.value.set(settings.color1);
+        uniforms.uColor2.value.set(settings.color2);
+        uniforms.uFogStart.value = settings.fogStart;
+        uniforms.uFogEnd.value = settings.fogEnd;
+        uniforms.uPulseMaxRadius.value = settings.pulse.maxRadius;
+        uniforms.uPulseThickness.value = settings.pulse.thickness;
+        uniforms.uPulseFade.value = settings.pulse.fade;
+        uniforms.uPulseMinIntensity.value = settings.pulse.minIntensity;
+    }
+
+    applyGhostSettings() {
+        const settings = this.settings.ghost;
+        const ghostLegoMaterial = this.ghostLego.children[0].material;
+
+        ghostLegoMaterial.opacity = settings.legoOpacity;
+        ghostLegoMaterial.wireframe = settings.legoWireframe;
+        this.ghostCell.material.opacity = settings.cellOpacity;
+    }
+
+    /**
      * Debugging
      */
     createDebugFolder() {
@@ -593,21 +733,113 @@ export default class SceneLegoBuilder extends Scene {
 
         const folder = this.debugger.addFolder({ title: 'Scene' });
 
-        folder
-            .addBinding(this, 'activeCamera', {
-                options: {
-                    main: 'main',
-                    debug: 'debug',
-                },
-            })
-            .on('change', (event) => {
-                this.camera = this.cameras[event.value];
-            });
+        folder.addBinding(this.settings, 'background').on('change', () => this.applyBackgroundSettings());
 
-        folder.addButton({ title: 'Test physics' }).on('click', async () => {
-            this.physics?.addScene(this);
-        });
+        this.createCamerasDebugFolder(folder);
+        this.createLightsDebugFolder(folder);
+        this.createEnvironmentDebugFolder(folder);
+        this.createLegosDebugFolder(folder);
+        this.createFloorDebugFolder(folder);
+        this.createGhostDebugFolder(folder);
 
         return folder;
+    }
+
+    createCamerasDebugFolder(parent) {
+        const settings = this.settings.cameras;
+        const folder = parent.addFolder({ title: 'Cameras', expanded: false });
+        folder.on('change', () => this.applyCamerasSettings());
+
+        folder.addBinding(settings, 'active', { options: keysAsOptions(this.cameras) });
+        folder.addBinding(settings.main, 'frustumSize', { label: 'main size', min: 2, max: 60, step: 0.5 });
+        folder.addBinding(settings.debug, 'fov', { label: 'debug fov', min: 10, max: 120, step: 1 });
+    }
+
+    createLightsDebugFolder(parent) {
+        const { ambient, directional, shadow } = this.settings.lights;
+        const folder = parent.addFolder({ title: 'Lights', expanded: false });
+
+        const ambientFolder = folder.addFolder({ title: 'Ambient' });
+        ambientFolder.on('change', () => this.applyLightsSettings());
+        ambientFolder.addBinding(ambient, 'color');
+        ambientFolder.addBinding(ambient, 'intensity', { min: 0, max: 5, step: 0.01 });
+
+        const directionalFolder = folder.addFolder({ title: 'Directional' });
+        directionalFolder.on('change', () => this.applyLightsSettings());
+        directionalFolder.addBinding(directional, 'color');
+        directionalFolder.addBinding(directional, 'intensity', { min: 0, max: 10, step: 0.01 });
+        directionalFolder.addBinding(directional, 'position', {
+            x: { min: -30, max: 30 },
+            y: { min: 0, max: 30 },
+            z: { min: -30, max: 30 },
+        });
+        // Helpers are debug-only, they are not part of the settings
+        directionalFolder.addBinding(this.helpers.directional, 'visible', { label: 'helper' });
+
+        const shadowFolder = folder.addFolder({ title: 'Shadows' });
+        shadowFolder.on('change', () => this.applyShadowSettings());
+        shadowFolder.addBinding(shadow, 'enabled');
+        shadowFolder.addBinding(shadow, 'intensity', { min: 0, max: 1, step: 0.01 });
+        shadowFolder.addBinding(shadow, 'floorOpacity', { min: 0, max: 1, step: 0.01 });
+        shadowFolder.addBinding(shadow, 'bias', { min: -0.01, max: 0.01, step: 0.0001 });
+        shadowFolder.addBinding(shadow, 'normalBias', { min: -0.1, max: 0.1, step: 0.001 });
+        shadowFolder.addBinding(shadow, 'radius', { min: 0, max: 20, step: 0.1 });
+        shadowFolder.addBinding(shadow, 'mapSize', { options: { 512: 512, 1024: 1024, 2048: 2048, 4096: 4096 } });
+        shadowFolder.addBinding(shadow, 'cameraSize', { min: 1, max: 30, step: 0.5 });
+        shadowFolder.addBinding(shadow, 'near', { min: 0.1, max: 20, step: 0.1 });
+        shadowFolder.addBinding(shadow, 'far', { min: 1, max: 200, step: 1 });
+        shadowFolder.addBinding(this.helpers.shadowCamera, 'visible', { label: 'camera helper' });
+    }
+
+    createEnvironmentDebugFolder(parent) {
+        const settings = this.settings.environment;
+        const folder = parent.addFolder({ title: 'Environment', expanded: false });
+        folder.on('change', () => this.applyEnvironmentSettings());
+
+        folder.addBinding(settings, 'enabled');
+        folder.addBinding(settings, 'intensity', { min: 0, max: 5, step: 0.01 });
+        folder.addBinding(settings, 'rotation', { min: -Math.PI, max: Math.PI, step: 0.01 });
+    }
+
+    createLegosDebugFolder(parent) {
+        const { material, palette } = this.settings.legos;
+        const folder = parent.addFolder({ title: 'Legos', expanded: false });
+        folder.on('change', () => this.applyLegosSettings());
+
+        const materialFolder = folder.addFolder({ title: 'Material' });
+        for (const key in material) materialFolder.addBinding(material, key, { min: 0, max: 1, step: 0.01 });
+
+        const paletteFolder = folder.addFolder({ title: 'Palette' });
+        palette.forEach((_, index) => paletteFolder.addBinding(palette, index, { label: `color ${index + 1}` }));
+    }
+
+    createFloorDebugFolder(parent) {
+        const settings = this.settings.floor;
+        const folder = parent.addFolder({ title: 'Floor', expanded: false });
+        folder.on('change', () => this.applyFloorSettings());
+
+        folder.addBinding(settings, 'color1');
+        folder.addBinding(settings, 'color2');
+        folder.addBinding(settings, 'fogStart', { min: 0, max: 1, step: 0.01 });
+        folder.addBinding(settings, 'fogEnd', { min: 0, max: 1, step: 0.01 });
+
+        const pulseFolder = folder.addFolder({ title: 'Pulse' });
+        pulseFolder.addBinding(settings.pulse, 'maxRadius', { min: 1, max: 60, step: 0.5 });
+        pulseFolder.addBinding(settings.pulse, 'thickness', { min: 0, max: 15, step: 0.1 });
+        pulseFolder.addBinding(settings.pulse, 'fade', { min: 0, max: 5, step: 0.05 });
+        pulseFolder.addBinding(settings.pulse, 'minIntensity', { min: 0, max: 1, step: 0.01 });
+        pulseFolder.addButton({ title: 'Play impact' }).on('click', () => {
+            this.playFloorImpact(this.legoPropsManager.color, { x: 0, z: 0 });
+        });
+    }
+
+    createGhostDebugFolder(parent) {
+        const settings = this.settings.ghost;
+        const folder = parent.addFolder({ title: 'Ghost', expanded: false });
+        folder.on('change', () => this.applyGhostSettings());
+
+        folder.addBinding(settings, 'legoOpacity', { min: 0, max: 1, step: 0.01 });
+        folder.addBinding(settings, 'legoWireframe');
+        folder.addBinding(settings, 'cellOpacity', { min: 0, max: 1, step: 0.01 });
     }
 }

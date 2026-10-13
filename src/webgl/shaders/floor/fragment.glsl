@@ -4,6 +4,8 @@ uniform float uGridSize;
 uniform vec3 uColor1;
 uniform vec3 uColor2;
 uniform vec3 uFogColor;
+uniform float uFogStart;
+uniform float uFogEnd;
 uniform float uAnimationProgress;
 uniform vec3 uAnimationColor;
 uniform vec2 uAnimationOffset;
@@ -49,7 +51,7 @@ void main() {
 
     // "Fog"
     float fakeFog = 1.0 * distance(uv, vec2(0.5));
-    fakeFog = smoothstep(0.0, 0.5, fakeFog);
+    fakeFog = smoothstep(uFogStart, uFogEnd, fakeFog);
     outputColor = mix(outputColor, uFogColor, fakeFog);
 
     gl_FragColor = vec4(vec3(outputColor), 1.0);
