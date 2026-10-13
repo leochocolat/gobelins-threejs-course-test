@@ -7,6 +7,16 @@
             "type": "PCF"
         }
     },
+    "postprocessing": {
+        "invert": {
+            "enabled": false
+        },
+        "filmGrain": {
+            "enabled": false,
+            "intensity": 0.5,
+            "grayscale": false
+        }
+    },
     "scene": {
         "background": "#f1f1f1",
         "cameras": {

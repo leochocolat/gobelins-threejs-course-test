@@ -16,17 +16,7 @@ import { Pane } from 'tweakpane';
 import SceneLegoBuilder from './SceneLegoBuilder';
 import settings from './settings.json';
 import { keysAsOptions } from './utils/debug';
-import {
-    BloomPass,
-    BokehPass,
-    EffectComposer,
-    OutputPass,
-    RenderPass,
-    ShaderPass,
-    UnrealBloomPass,
-} from 'three/examples/jsm/Addons.js';
-import { uniform } from 'three/tsl';
-import { Vector2 } from 'three/webgpu';
+import { EffectComposer, FilmPass, OutputPass, RenderPass, ShaderPass } from 'three/examples/jsm/Addons.js';
 
 const TONE_MAPPINGS = {
     None: NoToneMapping,
@@ -89,21 +79,17 @@ class WebGLApplication {
 
         passes.render = new RenderPass(this.scene, this.scene.camera);
         passes.custom = this.createCustomShaderPass();
-
+        passes.filmGrain = new FilmPass();
         passes.output = new OutputPass();
 
         this.composer.addPass(passes.render);
-        // this.composer.addPass(passes.custom);
-        // this.composer.addPass(passes.bloom);
+        this.composer.addPass(passes.custom);
+        this.composer.addPass(passes.filmGrain);
         this.composer.addPass(passes.output);
 
-        return passes;
-    }
+        this.applyPostprocessingSettings(passes);
 
-    createBloomPass() {
-        const resolution = new Vector2(this.renderWidth * 0.5, this.renderHeight * 0.5);
-        const bloomPass = new UnrealBloomPass(resolution, 0.5, 0.1, 0.95);
-        return bloomPass;
+        return passes;
     }
 
     createCustomShaderPass() {
@@ -193,6 +179,17 @@ class WebGLApplication {
         renderer.shadowMap.type = SHADOW_MAP_TYPES[shadowMap.type];
     }
 
+    applyPostprocessingSettings(passes = this.passes) {
+        const { invert, filmGrain } = this.settings.postprocessing;
+
+        // Disabled passes are skipped by the composer
+        passes.custom.enabled = invert.enabled;
+
+        passes.filmGrain.enabled = filmGrain.enabled;
+        passes.filmGrain.uniforms.intensity.value = filmGrain.intensity;
+        passes.filmGrain.uniforms.grayscale.value = filmGrain.grayscale;
+    }
+
     /**
      * Debugging
      */
@@ -217,6 +214,18 @@ class WebGLApplication {
         shadowsFolder
             .addBinding(rendererSettings.shadowMap, 'type', { options: keysAsOptions(SHADOW_MAP_TYPES) })
             .on('change', applyShadowMap);
+
+        const postprocessing = this.settings.postprocessing;
+        const postprocessingFolder = this.debugger.addFolder({ title: 'Post-processing', expanded: false, index: 1 });
+        postprocessingFolder.on('change', () => this.applyPostprocessingSettings());
+
+        const invertFolder = postprocessingFolder.addFolder({ title: 'Invert' });
+        invertFolder.addBinding(postprocessing.invert, 'enabled');
+
+        const filmGrainFolder = postprocessingFolder.addFolder({ title: 'Film grain' });
+        filmGrainFolder.addBinding(postprocessing.filmGrain, 'enabled');
+        filmGrainFolder.addBinding(postprocessing.filmGrain, 'intensity', { min: 0, max: 1, step: 0.01 });
+        filmGrainFolder.addBinding(postprocessing.filmGrain, 'grayscale');
 
         // Paste the copied JSON into src/webgl/settings.json to make it the new defaults
         this.debugger.addButton({ title: 'Copy settings (JSON)' }).on('click', () => {
