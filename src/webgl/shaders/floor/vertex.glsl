@@ -1,3 +1,6 @@
+#include <common>
+#include <fog_pars_vertex>
+
 // Varyings
 varying vec2 vUv;
 varying vec4 vPosition;
@@ -8,6 +11,8 @@ void main() {
 
     vUv = uv;
     vPosition = pos;
-
+    
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+
+    #include <fog_vertex>
 }

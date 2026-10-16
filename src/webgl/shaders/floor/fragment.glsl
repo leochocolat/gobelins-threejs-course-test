@@ -1,3 +1,6 @@
+#include <common>
+#include <fog_pars_fragment>
+
 varying vec2 vUv;
 uniform sampler2D uMap;
 uniform float uGridSize;
@@ -20,6 +23,8 @@ float noise(vec2 st) {
 }
 
 void main() {
+    #include <map_fragment>
+
     vec2 uv = vUv;
 
     // Pattern
@@ -50,9 +55,11 @@ void main() {
     outputColor = mix(outputColor, uAnimationColor, cellActive);
 
     // "Fog"
-    float fakeFog = 1.0 * distance(uv, vec2(0.5));
-    fakeFog = smoothstep(uFogStart, uFogEnd, fakeFog);
-    outputColor = mix(outputColor, uFogColor, fakeFog);
+    // float fakeFog = 1.0 * distance(uv, vec2(0.5));
+    // fakeFog = smoothstep(uFogStart, uFogEnd, fakeFog);
+    // outputColor = mix(outputColor, uFogColor, fakeFog);
 
     gl_FragColor = vec4(vec3(outputColor), 1.0);
+
+    #include <fog_fragment>
 }

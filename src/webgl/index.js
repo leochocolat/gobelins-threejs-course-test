@@ -169,7 +169,7 @@ class WebGLApplication {
     }
 
     applyRendererSettings(renderer = this.renderer) {
-        const { toneMapping, exposure, shadowMap } = this.settings.renderer;
+        const { toneMapping, exposure, shadowMap, transmissionResolution } = this.settings.renderer;
 
         // Tone mapping is applied by the OutputPass, which reads these renderer values
         renderer.toneMapping = TONE_MAPPINGS[toneMapping];
@@ -177,6 +177,8 @@ class WebGLApplication {
 
         renderer.shadowMap.enabled = shadowMap.enabled;
         renderer.shadowMap.type = SHADOW_MAP_TYPES[shadowMap.type];
+
+        renderer.transmissionResolutionScale = transmissionResolution;
     }
 
     applyPostprocessingSettings(passes = this.passes) {
@@ -208,6 +210,10 @@ class WebGLApplication {
             apply();
             this.refreshShadows();
         };
+
+        folder
+            .addBinding(this.settings.renderer, 'transmissionResolution')
+            .on('change', () => this.applyRendererSettings());
 
         const shadowsFolder = folder.addFolder({ title: 'Shadow map' });
         shadowsFolder.addBinding(rendererSettings.shadowMap, 'enabled').on('change', applyShadowMap);

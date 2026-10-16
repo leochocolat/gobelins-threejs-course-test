@@ -24,6 +24,7 @@ import {
     Scene,
     ShaderMaterial,
     ShadowMaterial,
+    UniformsLib,
     Vector2,
 } from 'three';
 import { GLTFLoader, HDRLoader, OrbitControls } from 'three/examples/jsm/Addons.js';
@@ -45,7 +46,7 @@ export default class SceneLegoBuilder extends Scene {
         this.settings = options.settings;
 
         this.background = new Color();
-        // this.fog = this.createFog();
+        this.fog = this.createFog();
 
         this.cameras = this.createCameras();
 
@@ -175,9 +176,9 @@ export default class SceneLegoBuilder extends Scene {
                 uGridSize: { value: this.gridSize },
                 uColor1: { value: new Color() },
                 uColor2: { value: new Color() },
-                uFogColor: { value: new Color() },
-                uFogStart: { value: 0 },
-                uFogEnd: { value: 0 },
+                // uFogColor: { value: new Color() },
+                // uFogStart: { value: 0 },
+                // uFogEnd: { value: 0 },
                 uAnimationProgress: { value: 0 },
                 uAnimationColor: { value: new Color('white') },
                 uAnimationOffset: { value: new Vector2(0, 0) },
@@ -185,8 +186,12 @@ export default class SceneLegoBuilder extends Scene {
                 uPulseThickness: { value: 0 },
                 uPulseFade: { value: 0 },
                 uPulseMinIntensity: { value: 0 },
+                ...UniformsLib.fog,
             },
         });
+
+        console.log(UniformsLib.fog);
+        console.log(material.uniforms);
 
         const mesh = new Mesh(geometry, material);
         mesh.rotation.x = -Math.PI / 2;
@@ -624,7 +629,7 @@ export default class SceneLegoBuilder extends Scene {
     applyBackgroundSettings() {
         // Background is linked to the floor fog so the floor keeps fading into it
         this.background.set(this.settings.background);
-        this.floor.material.uniforms.uFogColor.value.set(this.settings.background);
+        // this.floor.material.uniforms.uFogColor.value.set(this.settings.background);
     }
 
     applyCamerasSettings() {
@@ -708,8 +713,8 @@ export default class SceneLegoBuilder extends Scene {
 
         uniforms.uColor1.value.set(settings.color1);
         uniforms.uColor2.value.set(settings.color2);
-        uniforms.uFogStart.value = settings.fogStart;
-        uniforms.uFogEnd.value = settings.fogEnd;
+        // uniforms.uFogStart.value = settings.fogStart;
+        // uniforms.uFogEnd.value = settings.fogEnd;
         uniforms.uPulseMaxRadius.value = settings.pulse.maxRadius;
         uniforms.uPulseThickness.value = settings.pulse.thickness;
         uniforms.uPulseFade.value = settings.pulse.fade;

@@ -47,6 +47,8 @@ export default class Lego extends Object3D {
             metalness: 0.1,
             clearcoat: 0.1,
             clearcoatRoughness: 0.1,
+            transmission: 0.8,
+            thickness: 0.1,
         });
 
         return material;

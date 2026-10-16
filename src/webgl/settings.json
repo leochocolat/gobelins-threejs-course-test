@@ -5,7 +5,8 @@
         "shadowMap": {
             "enabled": true,
             "type": "PCF"
-        }
+        },
+        "transmissionResolution": 0.5
     },
     "postprocessing": {
         "invert": {
@@ -61,7 +62,9 @@
                 "roughness": 0.1,
                 "metalness": 0.1,
                 "clearcoat": 0.1,
-                "clearcoatRoughness": 0.1
+                "clearcoatRoughness": 0.1,
+                "transmission": 0.8,
+                "thickness": 0.1
             },
             "palette": ["#ff0000", "#0000ff", "#ffff00"]
         },
